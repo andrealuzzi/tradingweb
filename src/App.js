@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState,useCallback } from "react";
 import AccountsTab from "./components/AccountsTab";
 import HistoryTab from "./components/HistoryTab";
 import PositionsTab from "./components/PositionsTab";
 import TradesTab from "./components/TradesTab";
+import OrdersTab from "./components/OrdersTab";
 import AssetsTab from "./components/AssetsTab";
+import ChartsTab from "./components/ChartsTab";
 import logo from "./logo.png"; // Make sure logo.png is in src/ or adjust the path
-
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css"; // Import your CSS file
 
 function App() {
@@ -24,6 +26,10 @@ function App() {
 
   const [trades, setTrades] = useState([]);
   const [tradesLoading, setTradesLoading] = useState(false);
+
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newAccountId, setNewAccountId] = useState("");
@@ -96,22 +102,33 @@ function App() {
     }
   }, [activeTab, selectedAccountId]);
 
-  // Fetch positions
+
+  // Fetch positions with auto-refresh every 30 seconds
   useEffect(() => {
+    let interval;
     if (activeTab === "positions" && selectedAccountId !== null) {
-      setPositionsLoading(true);
-      fetch(`/api/positions/${selectedAccountId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setPositions(data);
-          setPositionsLoading(false);
-        })
-        .catch((err) => {
-          console.error("Failed to fetch positions:", err);
-          setPositions([]);
-          setPositionsLoading(false);
-        });
+      const fetchPositions = () => {
+        setPositionsLoading(true);
+        fetch(`/api/positions/${selectedAccountId}`)
+          .then((res) => res.json())
+          .then((data) => {
+            setPositions(data);
+            setPositionsLoading(false);
+          })
+          .catch((err) => {
+            console.error("Failed to fetch positions:", err);
+            setPositions([]);
+            setPositionsLoading(false);
+          });
+      };
+
+      fetchPositions(); // Initial fetch
+
+      interval = setInterval(fetchPositions, 30000); // Refresh every 30 seconds
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [activeTab, selectedAccountId]);
 
   // Fetch trades
@@ -128,6 +145,23 @@ function App() {
           console.error("Failed to fetch trades:", err);
           setTrades([]);
           setTradesLoading(false);
+        });
+    }
+  }, [activeTab, selectedAccountId]);
+  // Fetch orders
+  useEffect(() => {
+    if (activeTab === "orders" && selectedAccountId !== null) {
+      setOrdersLoading(true);
+      fetch(`/api/orders/${selectedAccountId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setOrders(data);
+          setOrdersLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch orders:", err);
+          setOrders([]);
+          setOrdersLoading(false);
         });
     }
   }, [activeTab, selectedAccountId]);
@@ -185,6 +219,61 @@ function App() {
     setAddError("");
   };
 
+    // Add a refresh handler
+  const handleRefresh = useCallback(() => {
+  if (activeTab === "accounts") {
+    setLoading(true);
+    fetch("/api/accounts")
+      .then((res) => res.json())
+      .then((data) => {
+        setAccounts(data);
+        setLoading(false);
+      });
+  } else if (activeTab === "assets") {
+    setAssetsLoading(true);
+    fetch("/api/assets")
+      .then((res) => res.json())
+      .then((data) => {
+        setAssets(data);
+        setAssetsLoading(false);
+      });
+  } else if (activeTab === "history" && selectedAccountId !== null) {
+    setHistoryLoading(true);
+    fetch(`/api/accounthist/${selectedAccountId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setHistory(data);
+        setHistoryLoading(false);
+      });
+  } else if (activeTab === "positions" && selectedAccountId !== null) {
+    setPositionsLoading(true);
+    fetch(`/api/positions/${selectedAccountId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setPositions(data);
+        setPositionsLoading(false);
+      });
+  } else if (activeTab === "trades" && selectedAccountId !== null) {
+    setTradesLoading(true);
+    fetch(`/api/trades/${selectedAccountId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setTrades(data);
+        setTradesLoading(false);
+      });
+  }
+  else if (activeTab === "orders" && selectedAccountId !== null) {
+    setOrdersLoading(true);
+    fetch(`/api/orders/${selectedAccountId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setOrders(data);
+        setOrdersLoading(false);
+      });
+  }
+}, [activeTab, selectedAccountId]);
+
+
   // Handler for deleting an account
   const handleDeleteAccount = (accountId) => {
     if (!window.confirm("Are you sure you want to delete this account?")) return;
@@ -216,7 +305,8 @@ function App() {
     return grouped;
   };
 
-  return (
+    const mainLayout = (
+
     <div style={{ padding: "2rem" }}>
             <div style={{ display: "flex", alignItems: "center", marginBottom: "1.5rem" }}>
         <img src={logo} alt="Logo" style={{ height: "40px", marginRight: "1rem" }} />
@@ -229,6 +319,15 @@ function App() {
         >
           {theme === "dark" ? "🌙" : "☀️"}
         </button>
+                <button
+          onClick={handleRefresh}
+          className="theme-toggle-btn"
+          title="Refresh"
+          style={{ marginLeft: "0.5rem", fontSize: "1.7rem" }}
+        >
+          🌀
+        </button>
+
 </div>
       <div className="top-buttons">
       {/* Tabs */}
@@ -270,6 +369,15 @@ function App() {
           disabled={selectedAccountId === null}
         >
           Trades
+        </button>
+          <button className={`top-button${activeTab === "orders" ? " active" : ""}`}
+          onClick={() => setActiveTab("orders")}
+          style={{
+            fontWeight: activeTab === "orders" ? "bold" : "normal",
+          }}
+          disabled={selectedAccountId === null}
+        >
+          Orders
         </button>
                 <button className={`top-button${activeTab === "assets" ? " active" : ""}`}
           onClick={() => setActiveTab("assets")}
@@ -333,6 +441,15 @@ function App() {
           selectedAccountId={selectedAccountId}
         />
       )}
+
+      {activeTab === "orders" && (
+        <OrdersTab
+          orders={orders}
+          loading={ordersLoading}
+          selectedAccountId={selectedAccountId}
+        />
+      )}
+
         {activeTab === "assets" && (
         <AssetsTab
           assets={assets}
@@ -341,7 +458,26 @@ function App() {
         />
       )}
 
-    </div>
+       </div>
+  );
+
+    return (
+    <Router>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <AssetsTab
+                assets={assets}
+                loading={assetsLoading}
+              />
+            }
+          />
+          <Route path="/chart/:symbol" element={<ChartsTab />} />
+            <Route path="*" element={mainLayout} />
+          {/* Add other routes as needed */}
+        </Routes>
+    </Router>
   );
 }
 

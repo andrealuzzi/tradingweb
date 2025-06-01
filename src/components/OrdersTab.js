@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function TradesTab({ trades, loading, selectedAccountId }) {
+export default function OrdersTab({ orders, loading, selectedAccountId }) {
 
   // State for add position dialog
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -27,7 +27,7 @@ export default function TradesTab({ trades, loading, selectedAccountId }) {
       setAddError("All fields are required.");
       return;
     }
-    fetch("/api/trades", {
+    fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -41,7 +41,7 @@ export default function TradesTab({ trades, loading, selectedAccountId }) {
       }),
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to add trade");
+        if (!res.ok) throw new Error("Failed to add order");
         return res.json();
       })
       .then(() => {
@@ -50,7 +50,7 @@ export default function TradesTab({ trades, loading, selectedAccountId }) {
         // Optionally, refresh trades (ideally via a callback prop)
         window.location.reload();
       })
-      .catch(() => setAddError("Failed to add trade."));
+      .catch(() => setAddError("Failed to add order."));
   };
 
   const handleCancelAdd = () => {
@@ -63,27 +63,27 @@ export default function TradesTab({ trades, loading, selectedAccountId }) {
 
   return (
     <>
-      <h1>Trades    {selectedAccountId ? ` ${selectedAccountId}` : ""} </h1>
+      <h1>Orders    {selectedAccountId ? ` ${selectedAccountId}` : ""} </h1>
         <button  className="add-btn" onClick={handleOpenAdd} style={{ marginBottom: "1rem" }}>
-        Add Trade
+        Add Order
       </button>
       {selectedAccountId === null ? (
-        <p>Select an account to view its trades.</p>
+        <p>Select an account to view its orders.</p>
       ) : loading ? (
-        <p>Loading trades...</p>
-      ) : trades.length === 0 ? (
-        <p>No trades found for this account.</p>
+        <p>Loading order...</p>
+      ) : orders.length === 0 ? (
+        <p>No order found for this account.</p>
       ) : (
         <table border="1" cellPadding="8">
           <thead>
             <tr>
-              {Object.keys(trades[0]).map((key) => (
+              {Object.keys(orders[0]).map((key) => (
                 <th key={key}>{key}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {trades.map((row, idx) => (
+            {orders.map((row, idx) => (
               <tr key={idx}>
                 {Object.values(row).map((val, i) => (
                   <td key={i}>{val}</td>
@@ -118,7 +118,7 @@ export default function TradesTab({ trades, loading, selectedAccountId }) {
               boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
             }}
           >
-            <h2>Add Trade</h2>
+            <h2>Add Order</h2>
             <div style={{ marginBottom: "1rem" }}>
               <label>
                 Qty:

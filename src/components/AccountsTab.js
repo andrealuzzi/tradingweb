@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 
 export default function AccountsTab({
   accounts,
@@ -30,6 +30,23 @@ export default function AccountsTab({
   const [updateOwner, setUpdateOwner] = useState("");
 
   const [updateError, setUpdateError] = useState("");
+
+    // State for owner filter
+  const [owners, setOwners] = useState([]);
+  const [selectedOwner, setSelectedOwner] = useState("");
+
+
+  // Fetch owners from backend API
+  useEffect(() => {
+    fetch("/api/owners")
+      .then((res) => res.json())
+      .then((data) => {
+        // If your owner object has a 'name' field, map to names
+        setOwners(data.map(owner => owner.description));
+      })
+      .catch(() => setOwners([]));
+  }, []);
+
 
   // Open update dialog
   const handleOpenUpdate = (account) => {
@@ -73,32 +90,56 @@ export default function AccountsTab({
     setUpdateError("");
   };
 
+    // Filter accounts by selected owner
+  const filteredAccounts = selectedOwner
+    ? accounts.filter((acc) => acc.owner === selectedOwner)
+    : accounts;
+
+
   return (
     <>
       <h1>Accounts</h1>
-      <button className="add-btn"  onClick={onAddClick} style={{ marginBottom: "1rem" }}>
-        ADD
-      </button>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: "1rem", gap: "1rem" }}>
+        <button className="add-btn" onClick={onAddClick}>
+          ADD
+        </button>
+        <label>
+          Owner:&nbsp;
+          <select
+            value={selectedOwner}
+            onChange={(e) => setSelectedOwner(e.target.value)}
+            style={{ minWidth: "120px" }}
+          >
+            <option value="">All</option>
+            {owners.map((owner) => (
+              <option key={owner} value={owner}>
+                {owner}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       {loading ? (
         <p>Loading...</p>
-      ) : accounts.length === 0 ? (
+      ) : filteredAccounts.length === 0 ? (
         <p>No accounts found.</p>
       ) : (
         <table border="1" cellPadding="8">
           <thead>
             <tr>
-              {Object.keys(accounts[0]).map((key) => (
+              {Object.keys(filteredAccounts[0]).map((key) => (
                 <th key={key}>{key}</th>
               ))}
               <th>History</th>
               <th>Positions</th>
               <th>Trades</th>
+              <th>Orders</th>
               <th>Update</th>
               <th>Delete</th>
             </tr>
           </thead>
           <tbody>
-            {accounts.map((account, idx) => (
+            {filteredAccounts.map((account, idx) => (
               <tr key={idx}>
                 {Object.values(account).map((val, i) => (
                   <td key={i}>{val}</td>
@@ -112,6 +153,10 @@ export default function AccountsTab({
                 <td style={{ textAlign: "center" }}>
                   <button onClick={() => onTabClick("trades", account.id)} title="View Trades">💹</button>
                 </td>
+                <td style={{ textAlign: "center" }}>
+                  <button onClick={() => onTabClick("orders", account.id)} title="View Orders">🧾</button>  
+                </td>
+
                 <td style={{ textAlign: "center" }}>
                   <button
                     onClick={() => handleOpenUpdate(account)}

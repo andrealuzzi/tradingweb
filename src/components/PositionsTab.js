@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 // Helper to group positions by date
 const groupByDate = (data) => {
@@ -12,7 +12,7 @@ const groupByDate = (data) => {
 };
 
 export default function PositionsTab({ positions, loading, selectedAccountId }) {
-  const grouped = groupByDate(positions);
+  
 
   // State for add position dialog
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -24,13 +24,47 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
   const [addError, setAddError] = useState("");
 
     // Add 'value' field to each position (avgprice * quantity)
-  const positionsWithValue = positions.map((pos) => ({
+  const positionsWithValue = positions
+  .filter((pos) => pos.visible !== 0) // Only include visible positions
+  .map((pos) => ({
     ...pos,
     value:
       Number(pos.avgprice ?? pos.price ?? 0) *
       Number(pos.quantity ?? pos.qty ?? 0),
   }));
-
+  const grouped = groupByDate(positionsWithValue);
+  const [latestPrices, setLatestPrices] = useState({});
+  // Fetch latest prices for all unique symbols
+  useEffect(() => {
+    const symbols = [
+      ...new Set(
+        positionsWithValue
+          .map((pos) => pos.symbol)
+          .filter((s) => typeof s === "string" && s.length > 0)
+      ),
+    ];
+    if (symbols.length === 0) return;
+    const fetchPrices = async () => {
+      const prices = {};
+      await Promise.all(
+        symbols.map(async (symbol) => {
+          try {
+            const res = await fetch(`/api/prices/${symbol}`);
+            if (res.ok) {
+              const data = await res.json();
+              prices[symbol] = data.price ?? "—";
+            } else {
+              prices[symbol] = "—";
+            }
+          } catch {
+            prices[symbol] = "—";
+          }
+        })
+      );
+      setLatestPrices(prices);
+    };
+    fetchPrices();
+  }, [positions]);
 
   const handleOpenAdd = () => {
     setNewQty("");
@@ -57,6 +91,7 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
         currency: newCurrency,
         symbol: newSymbol,
         date: newDate,
+        visible: 1, // Default to visible
       }),
     })
       .then((res) => {
@@ -91,8 +126,27 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
       .catch(() => alert("Failed to delete position."));
   };
 
+    // Define the desired column order
+  const columnOrder = [
+    "account",
+    "id",
+    "date",
+    "symbol",
+    "quantity",
+    "avgprice",
+    // "price", // optionally include if you want
+    // "currency", // optionally include if you want
+  ];
+  // Helper to get columns in the desired order, plus any extras at the end
+  const getOrderedColumns = (row) => {
+    const keys = Object.keys(row);
+    const ordered = columnOrder.filter((col) => keys.includes(col));
+    const extras = keys.filter((col) => !ordered.includes(col));
+    return [...ordered, ...extras];
+  };
+
   return (
-    <>
+    <> 
       <h1>Positions    {selectedAccountId ? ` ${selectedAccountId}` : ""} </h1>
       <button  className="add-btn" onClick={handleOpenAdd} style={{ marginBottom: "1rem" }}>
         Add Position
@@ -104,91 +158,118 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
       ) : positions.length === 0 ? (
         <p>No positions found for this account.</p>
       ) : (
-        Object.entries(grouped).map(([date, rows]) => (
-          <div key={date} style={{ marginBottom: "2rem" }}>
-            <h3>{date}</h3>
-            <table border="1" cellPadding="8">
-              <thead>
-                <tr>
-                  {Object.keys(rows[0]).map((key) => (
-                    <th key={key}>{key}</th>
-                  ))}
-                  <th>Total</th>
-                  <th>Edit</th>
-                  <th>Delete</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, idx) => (
-                  <tr key={idx}>
-                    {Object.values(row).map((val, i) => (
-                      <td key={i}>{val}</td>
+        Object.entries(grouped).map(([date, rows]) => {
+          const orderedColumns = getOrderedColumns(rows[0]);
+          return (
+            <div key={date} style={{ marginBottom: "2rem" }}>
+              <h3>{date}</h3>
+              <table border="1" cellPadding="8">
+                <thead>
+                  <tr>
+                    {orderedColumns.map((key) => (
+                      <th key={key}>{key}</th>
                     ))}
-                                        <td>
-                      {(
-                        Number(row.avgprice ?? row.price ?? 0) *
-                        Number(row.quantity ?? row.qty ?? 0)
-                      ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                    </td>
-<td style={{ textAlign: "center" }}>
-  <button
-    // Edit functionality not implemented yet
-    onClick={() => alert("Edit functionality not implemented yet.")}
-    title="Edit Position"
-    style={{
-      background: "none",
-      border: "none",
-      cursor: "pointer",
-      color: "blue",
-      fontSize: "1.2em",
-    }}
-  >
-    ✏️
-  </button>
-</td>
-<td style={{ textAlign: "center" }}>
-  <button
-    onClick={() => handleDeletePosition(row.id)}
-    title="Delete Position"
-    style={{
-      background: "none",
-      border: "none",
-      cursor: "pointer",
-      color: "red",
-      fontSize: "1.2em",
-    }}
-  >
-    🗑️
-  </button>
-</td>
-
-
-
+                    <th>Last</th>
+                    <th>P&L</th>
+                    <th>Total</th>
+                    <th>Edit</th>
+                    <th>Delete</th>
                   </tr>
-                ))}
+                </thead>
+                <tbody>
+                  {rows.map((row, idx) => (
+                    <tr key={idx}>
+                      {orderedColumns.map((key) => (
+                        <td key={key}>{row[key]}</td>
+                      ))}
+                      <td>
+                        {latestPrices[row.symbol] !== undefined
+                          ? latestPrices[row.symbol]
+                          : "—"}
+                      </td>
+                                            <td>
+                        {(
+                          Number(row.qty ?? 0)*
+                          (latestPrices[row.symbol]-row.price ?? row.price ) 
+                        ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      </td>
+
+                      <td>
+                        {(
+                          Number(row.avgprice ?? row.price ?? 0) *
+                          Number(row.quantity ?? row.qty ?? 0)
+                        ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <button
+                          onClick={() =>
+                            alert("Edit functionality not implemented yet.")
+                          }
+                          title="Edit Position"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "blue",
+                            fontSize: "1.2em",
+                          }}
+                        >
+                          ✏️
+                        </button>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <button
+                          onClick={() => handleDeletePosition(row.id)}
+                          title="Delete Position"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "red",
+                            fontSize: "1.2em",
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                   {/* Sum row */}
-  <tr>
-    {Object.keys(rows[0]).map((_, i) => (
-      <td key={i}></td>
-    ))}
-    <td style={{ fontWeight: "bold" }}>
-      {rows
-        .reduce(
-          (sum, row) =>
-            sum +
-            Number(row.avgprice ?? row.price ?? 0) *
-              Number(row.quantity ?? row.qty ?? 0),
-          0
-        )
-        .toLocaleString(undefined, { maximumFractionDigits: 2 })}
-    </td>
+                  <tr>
+                    {orderedColumns.map((_, i) => (
+                      <td key={i}></td>
+                    ))}
+                    <td></td>
+                    <td style={{ fontWeight: "bold" }}>
+                      {rows
+                        .reduce(
+                          (sum, row) =>{
+      const qty = Number(row.quantity ?? row.qty ?? 0);
+      const last = Number(latestPrices[row.symbol]);
+      const avg = Number(row.avgprice ?? row.price ?? 0);
+      const pnl = qty * (last - avg);
+      return sum + (isNaN(pnl) ? 0 : pnl);
+    }, 0)
+    .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </td>
 
-  </tr>
-
-              </tbody>
-            </table>
-          </div>
-        ))
+                    <td style={{ fontWeight: "bold" }}>
+                      {rows
+                        .reduce(
+                          (sum, row) =>
+                            sum +
+                            Number(row.avgprice ?? row.price ?? 0) *
+                              Number(row.quantity ?? row.qty ?? 0),
+                          0
+                        )
+                        .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          );
+        })
       )}
 
       {/* Add Position Dialog */}

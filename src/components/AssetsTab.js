@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import "../App.css";
 
 export default function AssetsTab({ assets, loading, selectedAccountId }) {
@@ -16,7 +18,7 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
   const [newCurrency, setNewCurrency] = useState("");
   const [addError, setAddError] = useState("");
   const [editError, setEditError] = useState("");
-
+  const navigate = useNavigate();
   useEffect(() => {
     if (!assets) {
       setLocalLoading(true);
@@ -42,6 +44,11 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
       })
       .catch(() => alert("Failed to delete asset."));
   };
+    const handleChartAsset = (symbol) => {
+
+        window.open(`/chart/${symbol}`, '_blank');
+        
+  };
 
   const handleOpenAdd = () => {
     setNewSymbol("");
@@ -54,7 +61,7 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
   };
 
   const handleSaveAdd = () => {
-    if (!newSymbol || !newName || !newType || !newValue || !newCurrency) {
+    if (!newSymbol || !newName || !newType  || !newCurrency) {
       setAddError("All fields are required.");
       return;
     }
@@ -63,9 +70,8 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         symbol: newSymbol,
-        name: newName,
+        description: newName,
         type: newType,
-        value: newValue,
         currency: newCurrency,
       }),
     })
@@ -144,6 +150,8 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
                 ))}
                 <th>Edit</th>
                 <th>Delete</th>
+                <th>Chart</th>
+                <th>Details</th>
               </tr>
             </thead>
             <tbody>
@@ -182,6 +190,37 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
                       🗑️
                     </button>
                   </td>
+                     <td style={{ textAlign: "center" }}>
+                    <button
+                      onClick={() => handleChartAsset(asset.symbol)}
+                      title="Chart"
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "red",
+                        fontSize: "1.2em",
+                      }}
+                    >
+                      📈
+                    </button>
+                  </td>
+                  <td>
+  <button
+    onClick={() => window.open(`https://www.roic.ai/quote/${asset.symbol}`, '_blank')}
+    title="Details"
+    style={{
+      background: "none",
+      border: "none",
+      cursor: "pointer",
+      color: "purple",
+      fontSize: "1.2em",
+    }}
+  >
+    🌐
+  </button>
+                    </td>
+
                 </tr>
               ))}
             </tbody>
