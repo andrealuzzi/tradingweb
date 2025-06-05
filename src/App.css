@@ -225,3 +225,14 @@ h1 {
 body.dark-theme h1 {
   color: #43e97b;
 }
+.stats-box {
+  background: #f8f8f8;
+  color: #000;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+body.dark-theme .stats-box {
+  background: #111;
+  color: #fff;
+}

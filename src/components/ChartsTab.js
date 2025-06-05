@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams,useNavigate } from "react-router-dom";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -27,6 +27,7 @@ function ChartsTab() {
   const [prices, setPrices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     setLoading(true);
@@ -53,6 +54,12 @@ function ChartsTab() {
         setLoading(false);
       });
   }, [symbol]);
+
+  // Pagination logic
+  const rowsPerPage = 100; // Set the number of rows per page
+  const [page, setPage] = useState(1);
+  const totalPages = Math.ceil(prices.length / rowsPerPage);
+  const pagedPrices = prices.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
     // Prepare data for the chart
   const chartData = {
@@ -87,6 +94,7 @@ console.log("Prices:", prices);
   return (
  <div>
       <h1>Chart for {symbol}</h1>
+      <button onClick={() => navigate("/Requests")}>Back to Home</button>
       {loading && <p>Loading...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
       {!loading && !error  && prices.length > 0  && (
@@ -94,16 +102,33 @@ console.log("Prices:", prices);
           <div style={{ maxWidth: 1200 }}>
             <Line data={chartData} options={chartOptions} />
           </div>
+        <div style={{ margin: "1rem 0" }}>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <span style={{ margin: "0 1rem" }}>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </button>
+          </div>
           <table border="1" cellPadding="8">
             <thead>
               <tr>
-                {Object.keys(prices[0]).map((key) => (
+                {Object.keys(pagedPrices[0]).map((key) => (
                   <th key={key}>{key}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {prices.map((row, idx) => (
+              {pagedPrices.map((row, idx) => (
                 <tr key={idx}>
                   {Object.values(row).map((val, i) => (
                     <td key={i}>{val}</td>

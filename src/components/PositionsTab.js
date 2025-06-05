@@ -179,9 +179,13 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
                 <tbody>
                   {rows.map((row, idx) => (
                     <tr key={idx}>
-                      {orderedColumns.map((key) => (
-                        <td key={key}>{row[key]}</td>
-                      ))}
+                    {orderedColumns.map((key) => (
+  <td key={key}>
+    {typeof row[key] === "number"
+      ? row[key].toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })
+      : row[key]}
+  </td>
+))}
                       <td>
                         {latestPrices[row.symbol] !== undefined
                           ? latestPrices[row.symbol]
@@ -189,8 +193,7 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
                       </td>
                                             <td>
                         {(
-                          Number(row.qty ?? 0)*
-                          (latestPrices[row.symbol]-row.price ?? row.price ) 
+                          Number(row.real_pnl+row.unreal_pnl ?? 0)
                         ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </td>
 
@@ -244,10 +247,8 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
                       {rows
                         .reduce(
                           (sum, row) =>{
-      const qty = Number(row.quantity ?? row.qty ?? 0);
-      const last = Number(latestPrices[row.symbol]);
-      const avg = Number(row.avgprice ?? row.price ?? 0);
-      const pnl = qty * (last - avg);
+
+      const pnl = Number(row.real_pnl + row.unreal_pnl ?? 0);
       return sum + (isNaN(pnl) ? 0 : pnl);
     }, 0)
     .toLocaleString(undefined, { maximumFractionDigits: 2 })}
