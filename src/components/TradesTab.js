@@ -12,6 +12,11 @@ export default function TradesTab({ trades, loading, selectedAccountId }) {
   const [newDate, setNewDate] = useState("");
   const [addError, setAddError] = useState("");
 
+  // Filter and sort state
+  const [filters, setFilters] = useState({});
+  const [sortKey, setSortKey] = useState(null);
+  const [sortAsc, setSortAsc] = useState(true);
+
   const handleOpenAdd = () => {
     setNewQty("");
     setNewPrice("");
@@ -58,6 +63,33 @@ export default function TradesTab({ trades, loading, selectedAccountId }) {
     setAddError("");
   };
 
+  // Filtering and sorting logic
+  let filteredTrades = trades;
+  if (trades.length > 0) {
+    filteredTrades = trades.filter((row) =>
+      Object.entries(filters).every(
+        ([key, value]) =>
+          value === "" ||
+          (row[key] !== null &&
+            row[key] !== undefined &&
+            row[key].toString().toLowerCase().includes(value.toLowerCase()))
+      )
+    );
+    if (sortKey) {
+      filteredTrades = [...filteredTrades].sort((a, b) => {
+        if (a[sortKey] === b[sortKey]) return 0;
+        if (a[sortKey] === null || a[sortKey] === undefined) return 1;
+        if (b[sortKey] === null || b[sortKey] === undefined) return -1;
+        if (typeof a[sortKey] === "number" && typeof b[sortKey] === "number") {
+          return sortAsc ? a[sortKey] - b[sortKey] : b[sortKey] - a[sortKey];
+        }
+        return sortAsc
+          ? a[sortKey].toString().localeCompare(b[sortKey].toString())
+          : b[sortKey].toString().localeCompare(a[sortKey].toString());
+      });
+    }
+  }
+
 
 
 
@@ -78,12 +110,40 @@ export default function TradesTab({ trades, loading, selectedAccountId }) {
           <thead>
             <tr>
               {Object.keys(trades[0]).map((key) => (
-                <th key={key}>{key}</th>
+                <th key={key} style={{ position: "relative" }}>
+                  <span
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      if (sortKey === key) setSortAsc((asc) => !asc);
+                      else {
+                        setSortKey(key);
+                        setSortAsc(true);
+                      }
+                    }}
+                  >
+                    {key}
+                    {sortKey === key ? (sortAsc ? " ▲" : " ▼") : ""}
+                  </span>
+                  <br />
+                  <input
+                    style={{ width: "90%" }}
+                    type="text"
+                    placeholder="Filter"
+                    value={filters[key] || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        [key]: e.target.value,
+                      }))
+                    }
+                  />
+                </th>
               ))}
             </tr>
           </thead>
+
           <tbody>
-            {trades.map((row, idx) => (
+            {filteredTrades.map((row, idx) => (
               <tr key={idx}>
                 {Object.values(row).map((val, i) => (
                   <td key={i}>{val}</td>

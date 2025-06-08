@@ -41,6 +41,37 @@ function App() {
 
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
 
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPwd, setLoginPwd] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginResult, setLoginResult] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  //const API_BASE = "https://tradingapp-egfgajhsc2f5ggfw.canadacentral-01.azurewebsites.net";
+   const API_BASE = "http://127.0.0.1:5000"; // For local development
+  
+  // Login handler
+  const handleLogin = () => {
+    setLoginError("");
+    fetch(`${API_BASE}/api/users/check_credentials`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: loginUser, password: loginPwd }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.result === 1) {
+          setShowLogin(false);
+          setLoginResult("Login successful!");
+          setIsLoggedIn(true); // <-- Set logged in!
+        } else {
+          setLoginError("Invalid credentials.");
+          setIsLoggedIn(false);
+        }
+      })
+      .catch(() => setLoginError("Login failed."));
+  };
   useEffect(() => {
     document.body.className = theme === "dark" ? "dark-theme" : "";
     localStorage.setItem("theme", theme);
@@ -54,7 +85,7 @@ function App() {
   useEffect(() => {
     if (activeTab === "accounts") {
       setLoading(true);
-      fetch("/api/accounts")
+      fetch(`${API_BASE}/api/accounts`)
         .then((res) => res.json())
         .then((data) => {
           setAccounts(data);
@@ -71,7 +102,7 @@ function App() {
   useEffect(() => {
     if (activeTab === "assets") {
       setAssetsLoading(true);
-      fetch("/api/assets")
+      fetch(`${API_BASE}/api/assets`)
         .then((res) => res.json())
         .then((data) => {
           setAssets(data);
@@ -88,7 +119,7 @@ function App() {
   useEffect(() => {
     if (activeTab === "history" && selectedAccountId !== null) {
       setHistoryLoading(true);
-      fetch(`/api/accounthist/${selectedAccountId}`)
+      fetch(`${API_BASE}/api/accounthist/${selectedAccountId}`)
         .then((res) => res.json())
         .then((data) => {
           setHistory(data);
@@ -104,38 +135,59 @@ function App() {
 
 
   // Fetch positions with auto-refresh every 30 seconds
-  useEffect(() => {
-    let interval;
-    if (activeTab === "positions" && selectedAccountId !== null) {
-      const fetchPositions = () => {
-        setPositionsLoading(true);
-        fetch(`/api/positions/${selectedAccountId}`)
-          .then((res) => res.json())
-          .then((data) => {
-            setPositions(data);
-            setPositionsLoading(false);
-          })
-          .catch((err) => {
-            console.error("Failed to fetch positions:", err);
-            setPositions([]);
-            setPositionsLoading(false);
-          });
-      };
+useEffect(() => {
+  let interval;
 
-      fetchPositions(); // Initial fetch
+  const fetchPositions = () => {
+    setPositionsLoading(true);
+    fetch(`${API_BASE}/api/positions/${selectedAccountId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setPositions(data);
+        setPositionsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch positions:", err);
+        setPositions([]);
+        setPositionsLoading(false);
+      });
+  };
 
-      interval = setInterval(fetchPositions, 30000); // Refresh every 30 seconds
+  const fetchHistory = () => {
+    setHistoryLoading(true);
+    fetch(`${API_BASE}/api/accounthist/${selectedAccountId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setHistory(data);
+        setHistoryLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch account history:", err);
+        setHistory([]);
+        setHistoryLoading(false);
+      });
+  };
+
+  if (selectedAccountId !== null) {
+    if (activeTab === "positions") {
+      fetchPositions();
+      interval = setInterval(fetchPositions, 120000); // 2 minutes
+    } else if (activeTab === "history") {
+      fetchHistory();
+      interval = setInterval(fetchHistory, 120000); // 2 minutes
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [activeTab, selectedAccountId]);
+  }
+
+  return () => {
+    if (interval) clearInterval(interval);
+  };
+}, [activeTab, selectedAccountId]);
 
   // Fetch trades
   useEffect(() => {
     if (activeTab === "trades" && selectedAccountId !== null) {
       setTradesLoading(true);
-      fetch(`/api/trades/${selectedAccountId}`)
+      fetch(`${API_BASE}/api/trades/${selectedAccountId}`)
         .then((res) => res.json())
         .then((data) => {
           setTrades(data);
@@ -152,7 +204,7 @@ function App() {
   useEffect(() => {
     if (activeTab === "orders" && selectedAccountId !== null) {
       setOrdersLoading(true);
-      fetch(`/api/orders/${selectedAccountId}`)
+      fetch(`${API_BASE}/api/orders/${selectedAccountId}`)
         .then((res) => res.json())
         .then((data) => {
           setOrders(data);
@@ -186,7 +238,7 @@ function App() {
       setAddError("All fields are required.");
       return;
     }
-    fetch("/api/accounts", {
+    fetch(`${API_BASE}/api/accounts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: newAccountId, description: newAccountDescription,currency: newAccountCurrency, 
@@ -223,7 +275,7 @@ function App() {
   const handleRefresh = useCallback(() => {
   if (activeTab === "accounts") {
     setLoading(true);
-    fetch("/api/accounts")
+    fetch(`${API_BASE}/api/accounts`)
       .then((res) => res.json())
       .then((data) => {
         setAccounts(data);
@@ -231,7 +283,7 @@ function App() {
       });
   } else if (activeTab === "assets") {
     setAssetsLoading(true);
-    fetch("/api/assets")
+    fetch(`${API_BASE}/api/assets`)
       .then((res) => res.json())
       .then((data) => {
         setAssets(data);
@@ -239,7 +291,7 @@ function App() {
       });
   } else if (activeTab === "history" && selectedAccountId !== null) {
     setHistoryLoading(true);
-    fetch(`/api/accounthist/${selectedAccountId}`)
+    fetch(`${API_BASE}/api/accounthist/${selectedAccountId}`)
       .then((res) => res.json())
       .then((data) => {
         setHistory(data);
@@ -247,7 +299,7 @@ function App() {
       });
   } else if (activeTab === "positions" && selectedAccountId !== null) {
     setPositionsLoading(true);
-    fetch(`/api/positions/${selectedAccountId}`)
+    fetch(`${API_BASE}/api/positions/${selectedAccountId}`)
       .then((res) => res.json())
       .then((data) => {
         setPositions(data);
@@ -255,7 +307,7 @@ function App() {
       });
   } else if (activeTab === "trades" && selectedAccountId !== null) {
     setTradesLoading(true);
-    fetch(`/api/trades/${selectedAccountId}`)
+    fetch(`${API_BASE}/api/trades/${selectedAccountId}`)
       .then((res) => res.json())
       .then((data) => {
         setTrades(data);
@@ -264,7 +316,7 @@ function App() {
   }
   else if (activeTab === "orders" && selectedAccountId !== null) {
     setOrdersLoading(true);
-    fetch(`/api/orders/${selectedAccountId}`)
+    fetch(`${API_BASE}/api/orders/${selectedAccountId}`)
       .then((res) => res.json())
       .then((data) => {
         setOrders(data);
@@ -277,14 +329,14 @@ function App() {
   // Handler for deleting an account
   const handleDeleteAccount = (accountId) => {
     if (!window.confirm("Are you sure you want to delete this account?")) return;
-    fetch(`/api/accounts/${accountId}`, {
+    fetch(`${API_BASE}/api/accounts/${accountId}`, {
       method: "DELETE",
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to delete account");
         // Refresh accounts list
         setLoading(true);
-        fetch("/api/accounts")
+        fetch(`${API_BASE}/api/accounts`)
           .then((res) => res.json())
           .then((data) => {
             setAccounts(data);
@@ -308,10 +360,26 @@ function App() {
     const mainLayout = (
 
     <div style={{ padding: "2rem" }}>
-            <div style={{ display: "flex", alignItems: "center", marginBottom: "1.5rem" }}>
-        <img src={logo} alt="Logo" style={{ height: "40px", marginRight: "1rem" }} />
-        <span style={{ fontWeight: "bold", fontSize: "1.5rem" }}>Trading App</span>
-      
+<div style={{ display: "flex", alignItems: "center", marginBottom: "1.5rem" }}>
+  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <img src={logo} alt="Logo" style={{ height: "40px", marginBottom: "0.5rem" }} />
+    <button
+        className="add-btn"
+  onClick={() => {
+    if (isLoggedIn) {
+      setIsLoggedIn(false); // Log out
+      setLoginUser("");
+      setLoginPwd("");
+      setLoginResult(null);
+    } else {
+      setShowLogin(true); // Show login form
+    }
+  }}
+>
+  {isLoggedIn ? "Log out" : "Login"}
+  </button>
+  </div>
+
            <button
           onClick={toggleTheme}
           className="theme-toggle-btn"
@@ -366,7 +434,7 @@ function App() {
           style={{
             fontWeight: activeTab === "trades" ? "bold" : "normal",
           }}
-          disabled={selectedAccountId === null}
+          disabled={!isLoggedIn || selectedAccountId === null} // <-- Only enabled if logged in
         >
           Trades
         </button>
@@ -375,7 +443,7 @@ function App() {
           style={{
             fontWeight: activeTab === "orders" ? "bold" : "normal",
           }}
-          disabled={selectedAccountId === null}
+          disabled={!isLoggedIn || selectedAccountId === null} // <-- Only enabled if logged in
         >
           Orders
         </button>
@@ -385,6 +453,7 @@ function App() {
             fontWeight: activeTab === "assets" ? "bold" : "normal",
             
           }}
+          disabled={!isLoggedIn || selectedAccountId === null} // <-- Only enabled if logged in
 
         >
           Assets
@@ -414,6 +483,8 @@ function App() {
           addError={addError}
           onSaveAccount={handleSaveAccount}
           onCancelAdd={handleCancelAdd}
+          isLoggedIn={isLoggedIn} 
+          API_BASE={API_BASE} 
         />
       )}
 
@@ -431,6 +502,7 @@ function App() {
           loading={positionsLoading}
           selectedAccountId={selectedAccountId}
           groupByDate={groupByDate}
+          isLoggedIn={isLoggedIn} 
         />
       )}
 
@@ -439,6 +511,7 @@ function App() {
           trades={trades}
           loading={tradesLoading}
           selectedAccountId={selectedAccountId}
+
         />
       )}
 
@@ -455,29 +528,78 @@ function App() {
           assets={assets}
           loading={assetsLoading}
           selectedAccountId={selectedAccountId}
+            API_BASE={API_BASE} 
         />
       )}
 
        </div>
   );
 
+
+  // Login page
+  const loginPage = (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+    background: theme === "dark" ? "#222" : "#f8fafc",
+    color: theme === "dark" ? "#f8fafc" : "#222",
+    transition: "background 0.3s, color 0.3s"
+    }}>
+      <div style={{
+        background: "#fff",
+        padding: "2rem",
+        borderRadius: "8px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        minWidth: "300px"
+      }}>
+        <h2>Login</h2>
+        <div style={{ marginBottom: "1rem" }}>
+          <label>
+            User:
+            <input
+              type="text"
+              value={loginUser}
+              onChange={e => setLoginUser(e.target.value)}
+              style={{ marginLeft: "1rem" }}
+            />
+          </label>
+        </div>
+        <div style={{ marginBottom: "1rem" }}>
+          <label>
+            Password:
+            <input
+              type="password"
+              value={loginPwd}
+              onChange={e => setLoginPwd(e.target.value)}
+              style={{ marginLeft: "1rem" }}
+            />
+          </label>
+        </div>
+        {loginError && <div style={{ color: "red", marginBottom: "1rem" }}>{loginError}</div>}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
+          <button onClick={() => setShowLogin(false)}>Cancel</button>
+          <button onClick={handleLogin}>Login</button>
+        </div>
+      </div>
+    </div>
+  );
+if (showLogin) {
+  return loginPage;
+}
+function MainLayout() {
+  return mainLayout;
+}
     return (
-    <Router>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <AssetsTab
-                assets={assets}
-                loading={assetsLoading}
-              />
-            }
-          />
-          <Route path="/chart/:symbol" element={<ChartsTab />} />
-            <Route path="*" element={mainLayout} />
-          {/* Add other routes as needed */}
-        </Routes>
-    </Router>
+   <Router>
+  <Routes>
+    <Route path="/" element={<MainLayout />} />
+     <Route path="/chart/:symbol" element={<ChartsTab API_BASE={API_BASE} accounts={accounts}  />} />
+    <Route path="*" element={<MainLayout />}/>
+  </Routes>
+</Router>
   );
 }
 

@@ -1,8 +1,8 @@
 {
   "name": "tradingweb",
   "version": "0.1.0",
-  "private": true,
-  "proxy": "http://127.0.0.1:5000",
+  "private": false,
+  "proxy": "https://tradingapp-egfgajhsc2f5ggfw.canadacentral-01.azurewebsites.net",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",

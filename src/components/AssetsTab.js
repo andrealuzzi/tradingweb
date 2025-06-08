@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import "../App.css";
 
-export default function AssetsTab({ assets, loading, selectedAccountId }) {
+export default function AssetsTab({ assets, loading, selectedAccountId,  API_BASE }) {
   const [localAssets, setLocalAssets] = useState([]);
   const [localLoading, setLocalLoading] = useState(true);
 
@@ -19,6 +19,8 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
   const [addError, setAddError] = useState("");
   const [editError, setEditError] = useState("");
   const navigate = useNavigate();
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
   useEffect(() => {
     if (!assets) {
       setLocalLoading(true);
@@ -32,7 +34,10 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
     }
   }, [assets]);
 
-  const data = assets || localAssets;
+    // Sort assets alphabetically by symbol
+  const data = (assets || localAssets).slice().sort((a, b) =>
+    (a.symbol || "").localeCompare(b.symbol || "")
+  );
   const isLoading = loading !== undefined ? loading : localLoading;
 
   const handleDeleteAsset = (symbol) => {
@@ -92,6 +97,7 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
     setAddError("");
   };
 
+  const [newActive, setNewActive] = useState(true);
     // --- Edit Dialog Logic ---
   const handleOpenEdit = (asset) => {
     setEditAsset(asset);
@@ -99,6 +105,7 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
     setNewName(asset.name || asset.description || "");
     setNewType(asset.type || "");
     setNewCurrency(asset.currency || "");
+    setNewActive(asset.active !== undefined ? asset.active : true);
     setEditError("");
     setShowEditDialog(true);
   };
@@ -107,7 +114,7 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
       setEditError("All fields are required.");
       return;
     }
-    fetch(`/api/assets/${editAsset.symbol}`, {
+    fetch(`${API_BASE}/api/assets/${editAsset.symbol}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -116,6 +123,7 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
         type: newType,
         value: newValue,
         currency: newCurrency,
+        active: newActive,
       }),
     })
       .then((res) => {
@@ -229,7 +237,13 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
       </div>
 
       {showAddDialog && (
-        <div className="dialog-backdrop">
+        <div className="dialog-backdrop"
+         style={{
+      background: isDark ? "rgba(20,20,20,0.85)" : "rgba(0,0,0,0.3)",
+      transition: "background 0.3s"
+    }}
+        
+        >
           <div className="dialog-box">
             <h2>Add Asset</h2>
             <form
@@ -293,7 +307,14 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
 
 
       {showEditDialog && (
-        <div className="dialog-backdrop">
+        <div className="dialog-backdrop"
+                 style={{
+      background: isDark ? "rgba(20,20,20,0.85)" : "rgba(0,0,0,0.3)",
+      transition: "background 0.3s"
+    }}
+
+        
+        >
           <div className="dialog-box">
             <h2>Edit Asset</h2>
             <form
@@ -302,6 +323,15 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
                 handleSaveEdit();
               }}
             >
+                      <label>
+          Active:
+          <input
+            type="checkbox"
+            checked={newActive}
+            onChange={e => setNewActive(e.target.checked)}
+            style={{ marginLeft: "1rem" }}
+          />
+        </label>
               <label>
                 Symbol:
                 <input
@@ -310,6 +340,11 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
                   onChange={e => setNewSymbol(e.target.value)}
                   required
                   disabled
+                                   style={{
+      background: isDark ? "rgba(20,20,20,0.85)" : "rgba(0,0,0,0.3)",
+      transition: "background 0.3s"
+    }}
+
                 />
               </label>
               <label>
@@ -319,6 +354,11 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   required
+                                   style={{
+      background: isDark ? "rgba(20,20,20,0.85)" : "rgba(0,0,0,0.3)",
+      transition: "background 0.3s"
+    }}
+
                 />
               </label>
               <label>
@@ -328,6 +368,11 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
                   value={newType}
                   onChange={e => setNewType(e.target.value)}
                   required
+                                   style={{
+      background: isDark ? "rgba(20,20,20,0.85)" : "rgba(0,0,0,0.3)",
+      transition: "background 0.3s"
+    }}
+
                 />
               </label>
               <label>
@@ -337,6 +382,11 @@ export default function AssetsTab({ assets, loading, selectedAccountId }) {
                   value={newCurrency}
                   onChange={e => setNewCurrency(e.target.value)}
                   required
+                                   style={{
+      background: isDark ? "rgba(20,20,20,0.85)" : "rgba(0,0,0,0.3)",
+      transition: "background 0.3s"
+    }}
+
                 />
               </label>
               {editError && (

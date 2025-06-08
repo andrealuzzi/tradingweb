@@ -11,7 +11,7 @@ const groupByDate = (data) => {
   return grouped;
 };
 
-export default function PositionsTab({ positions, loading, selectedAccountId }) {
+export default function PositionsTab({ positions, loading, selectedAccountId,isLoggedIn }) {
   
 
   // State for add position dialog
@@ -36,6 +36,7 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
   const [latestPrices, setLatestPrices] = useState({});
   // Fetch latest prices for all unique symbols
   useEffect(() => {
+    let intervalId;
     const symbols = [
       ...new Set(
         positionsWithValue
@@ -64,6 +65,10 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
       setLatestPrices(prices);
     };
     fetchPrices();
+
+    intervalId = setInterval(fetchPrices, 300000); // Refresh every 60 seconds
+
+    return () => clearInterval(intervalId);
   }, [positions]);
 
   const handleOpenAdd = () => {
@@ -148,7 +153,7 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
   return (
     <> 
       <h1>Positions    {selectedAccountId ? ` ${selectedAccountId}` : ""} </h1>
-      <button  className="add-btn" onClick={handleOpenAdd} style={{ marginBottom: "1rem" }}>
+      <button disabled={!isLoggedIn} className="add-btn" onClick={handleOpenAdd} style={{ marginBottom: "1rem" }}>
         Add Position
       </button>
       {selectedAccountId === null ? (
@@ -204,7 +209,7 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
                         ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </td>
                       <td style={{ textAlign: "center" }}>
-                        <button
+                        <button disabled={!isLoggedIn}
                           onClick={() =>
                             alert("Edit functionality not implemented yet.")
                           }
@@ -221,7 +226,7 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
                         </button>
                       </td>
                       <td style={{ textAlign: "center" }}>
-                        <button
+                        <button disabled={!isLoggedIn}
                           onClick={() => handleDeletePosition(row.id)}
                           title="Delete Position"
                           style={{
@@ -359,7 +364,7 @@ export default function PositionsTab({ positions, loading, selectedAccountId }) 
             )}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
               <button onClick={handleCancelAdd}>Cancel</button>
-              <button onClick={handleSaveAdd}>Save</button>
+              <button  onClick={handleSaveAdd}>Save</button>
             </div>
           </div>
         </div>

@@ -20,6 +20,8 @@ export default function AccountsTab({
   setNewAccountGroup,
   newOwner,
   setnewOwner,
+  isLoggedIn,
+  API_BASE, 
 }) {
   // State for update dialog
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -38,7 +40,7 @@ export default function AccountsTab({
 
   // Fetch owners from backend API
   useEffect(() => {
-    fetch("/api/owners")
+    fetch(`${API_BASE}/api/owners`)
       .then((res) => res.json())
       .then((data) => {
         // If your owner object has a 'name' field, map to names
@@ -100,9 +102,12 @@ export default function AccountsTab({
     <>
       <h1>Accounts</h1>
       <div style={{ display: "flex", alignItems: "center", marginBottom: "1rem", gap: "1rem" }}>
-        <button className="add-btn" onClick={onAddClick}>
-          ADD
-        </button>
+        
+           <button className="add-btn" onClick={onAddClick}
+            disabled={!isLoggedIn}>
+            ADD
+          </button>
+          
         <label>
           Owner:&nbsp;
           <select
@@ -151,14 +156,14 @@ export default function AccountsTab({
                   <button onClick={() => onTabClick("positions", account.id)} title="View Positions">📊</button>
                 </td>
                 <td style={{ textAlign: "center" }}>
-                  <button onClick={() => onTabClick("trades", account.id)} title="View Trades">💹</button>
+                  <button onClick={() => onTabClick("trades", account.id)} disabled={!isLoggedIn} title="View Trades">💹</button>
                 </td>
                 <td style={{ textAlign: "center" }}>
-                  <button onClick={() => onTabClick("orders", account.id)} title="View Orders">🧾</button>  
+                  <button onClick={() => onTabClick("orders", account.id)} disabled={!isLoggedIn} title="View Orders">🧾</button>  
                 </td>
 
                 <td style={{ textAlign: "center" }}>
-                  <button
+                  <button disabled={!isLoggedIn}
                     onClick={() => handleOpenUpdate(account)}
                     title="Update Account"
                     style={{
@@ -173,7 +178,7 @@ export default function AccountsTab({
                   </button>
                 </td>
                 <td style={{ textAlign: "center" }}>
-                  <button
+                  <button disabled={!isLoggedIn}
                     onClick={() => onDeleteAccount(account.id)}
                     title="Delete Account"
                     style={{
